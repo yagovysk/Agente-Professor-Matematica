@@ -4,21 +4,96 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Professor de Matematica</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="glow glow-left" aria-hidden="true"></div>
+    <div class="glow glow-right" aria-hidden="true"></div>
+
     <main class="page">
       <section class="card">
-        <h1>Professor de Matematica</h1>
-        <p class="subtitle">
-          Pergunte sobre Bhaskara, equacoes, geometria e mais.
-        </p>
+        <header class="hero">
+          <p class="eyebrow">AGENTE DE APRENDIZADO</p>
+          <h1>Professor de Matematica</h1>
+          <p class="subtitle">
+            Um tutor futurista para Bhaskara, algebra, geometria e muito mais.
+          </p>
+        </header>
 
         <div class="suggestions" id="suggestions"></div>
 
         <div class="chat" id="chat"></div>
 
         <form id="chat-form" class="chat-form">
+          <div class="controls">
+            <label class="control-item">
+              Modo
+              <select id="study-mode">
+                <option value="tutoria" selected>Tutoria</option>
+                <option value="simulado">Simulado</option>
+              </select>
+            </label>
+            <label class="control-item">
+              Nivel
+              <select id="level">
+                <option value="escolar">Escolar</option>
+                <option value="vestibular">Vestibular</option>
+                <option value="graduacao" selected>Graduacao</option>
+                <option value="pos-graduacao">Pos-graduacao</option>
+              </select>
+            </label>
+            <label class="control-item">
+              Rigor
+              <select id="rigor">
+                <option value="normal">Normal</option>
+                <option value="alto" selected>Alto</option>
+              </select>
+            </label>
+            <label class="control-check">
+              <input id="include-exercises" type="checkbox" checked />
+              Incluir exercicio ao final
+            </label>
+            <label class="control-item">
+              Tema do simulado
+              <input
+                id="sim-topic"
+                type="text"
+                placeholder="Ex.: Calculo diferencial e integral"
+              />
+            </label>
+            <label class="control-item">
+              Dificuldade
+              <select id="sim-difficulty">
+                <option value="facil">Facil</option>
+                <option value="medio">Medio</option>
+                <option value="dificil" selected>Dificil</option>
+                <option value="olimpiada">Olimpiada</option>
+              </select>
+            </label>
+            <label class="control-item">
+              Quantidade
+              <input id="sim-count" type="number" min="1" max="20" value="5" />
+            </label>
+            <label class="control-check">
+              <input id="sim-with-answers" type="checkbox" checked />
+              Incluir gabarito no simulado
+            </label>
+            <button id="generate-simulado" type="button" class="ghost-btn">
+              Gerar Simulado
+            </button>
+          </div>
+
           <textarea
             id="question"
             placeholder="Ex.: Me explica Bhaskara com um exemplo completo"
@@ -29,6 +104,10 @@
       </section>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

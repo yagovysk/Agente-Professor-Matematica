@@ -1,9 +1,12 @@
 import "dotenv/config";
 import { createApp } from "./app";
-import { OpenAITeacherService } from "./services/aiTeacher";
+import { OllamaTeacherService } from "./services/aiTeacher";
 
 const port = Number(process.env.PORT ?? 3000);
-const teacherService = new OpenAITeacherService(process.env.OPENAI_API_KEY);
+const teacherService = new OllamaTeacherService(
+  process.env.OLLAMA_BASE_URL,
+  process.env.OLLAMA_MODEL,
+);
 const app = createApp(teacherService);
 
 app.listen(port, () => {

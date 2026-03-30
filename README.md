@@ -48,7 +48,7 @@ Este projeto foi criado para funcionar como um professor virtual de matematica:
 
 - Frontend estatico: HTML, CSS e JavaScript em public.
 - API HTTP: Express com rota de chat em /api/chat.
-- Servico de IA: camada dedicada para conversar com OpenAI.
+- Servico de IA: camada dedicada para conversar com Ollama local.
 - Validacao: Zod para garantir payload valido e reduzir erros.
 - Testes: Vitest + Supertest para garantir comportamento da API.
 
@@ -77,12 +77,13 @@ Por que usar:
 - Curva de aprendizado baixa.
 - Boa combinacao com middlewares (JSON, CORS, static).
 
-### OpenAI SDK
+### Ollama (modelo local)
 
 Por que usar:
 
-- Permite respostas de IA com boa qualidade didatica.
-- Integracao direta e objetiva via SDK oficial.
+- Gratuito para uso local.
+- Baixa latencia no desenvolvimento.
+- Permite trocar de modelo sem alterar o frontend.
 
 ### Zod
 
@@ -124,7 +125,8 @@ site-test/
 ## Requisitos
 
 - Node.js 18+
-- Chave de API da OpenAI
+- Ollama instalado localmente
+- Modelo baixado no Ollama (ex.: qwen2.5:3b)
 
 ## Configuracao do ambiente
 
@@ -142,8 +144,16 @@ copy .env.example .env
 
 3. Preencha as variaveis:
 
-- OPENAI_API_KEY=SuaChaveAqui
+- OLLAMA_BASE_URL=http://127.0.0.1:11434
+- OLLAMA_MODEL=qwen2.5:3b
 - PORT=3000
+
+4. Inicie o Ollama e baixe um modelo gratuito:
+
+```bash
+ollama pull qwen2.5:3b
+ollama run qwen2.5:3b
+```
 
 ## Como rodar
 
