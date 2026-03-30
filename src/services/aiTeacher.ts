@@ -355,11 +355,28 @@ function removeAdjacentDuplicateLines(text: string): string {
 
 function isCorruptedResponse(text: string): boolean {
   const normalized = text.toLowerCase();
-  return (
+  const obviousCorruption =
     normalized.includes("mathmath") ||
     normalized.includes("desculpe pela confusao anterior") ||
-    normalized.includes("questas")
-  );
+    normalized.includes("questas") ||
+    normalized.includes("aveludes") ||
+    normalized.includes("udesudes");
+
+  if (obviousCorruption) {
+    return true;
+  }
+
+  // Detecta saídas com baixa densidade semântica (muitos fragmentos curtos e ruído).
+  const words = normalized.match(/[a-zà-ÿ0-9]+/gi) || [];
+  if (!words.length) {
+    return true;
+  }
+
+  const shortWords = words.filter((w) => w.length <= 3).length;
+  const weirdTokens = (normalized.match(/["'=:()]{2,}|\b\d{2,}[a-z]{2,}\b/g) || [])
+    .length;
+
+  return shortWords / words.length > 0.78 && weirdTokens >= 2;
 }
 
 function hasCompleteSimuladoStructure(
@@ -369,9 +386,25 @@ function hasCompleteSimuladoStructure(
 ): boolean {
   const questionMatches = text.match(/quest[aã]o\s*\d+/gi) || [];
   const hasAllQuestions = questionMatches.length >= expectedCount;
-  const hasAnswerSection = withAnswers ? /gabarito/i.test(text) : true;
+  const hasAnswerSection = withAnswers
+    ? hasFilledGabarito(text, expectedCount)
+    : true;
 
   return hasAllQuestions && hasAnswerSection;
+}
+
+function hasFilledGabarito(text: string, expectedCount: number): boolean {
+  const match = /(^|\n)(#{1,6}\s*)?gabarito\b\s*:?/im.exec(text);
+  if (!match) {
+    return false;
+  }
+
+  const start = match.index + (match[1] ? match[1].length : 0);
+  const gabaritoSection = text.slice(start);
+  const answerLines =
+    gabaritoSection.match(/^\s*(?:[-*]\s*)?\d+\s*[\).:-]?\s+\S.+$/gim) || [];
+
+  return answerLines.length >= expectedCount;
 }
 
 export class OllamaTeacherService implements TeacherService {
@@ -430,6 +463,29 @@ export class OllamaTeacherService implements TeacherService {
     }
   }
 
+  private async recoverFromCorruptedOutput(
+    baseMessages: OllamaChatMessage[],
+    estimatedOutputTokens: number,
+    requestTimeoutMs: number,
+  ): Promise<string | null> {
+    const recoveryMessages: OllamaChatMessage[] = [
+      ...baseMessages,
+      {
+        role: "system",
+        content:
+          "A resposta anterior saiu corrompida. Responda novamente com texto limpo, completo e sem caracteres estranhos.",
+      },
+    ];
+
+    const retry = await this.requestOllama(
+      recoveryMessages,
+      Math.floor(estimatedOutputTokens * 0.85),
+      requestTimeoutMs,
+    );
+
+    return retry?.text?.trim() || null;
+  }
+
   async ask(
     question: string,
     history: ChatMessage[],
@@ -437,23 +493,14 @@ export class OllamaTeacherService implements TeacherService {
   ): Promise<string> {
     const preferencePrompt = buildPreferencePrompt(preferences);
     const isSimulado = preferences?.studyMode === "simulado";
-    const wantsDetailedAnswer = shouldReturnDetailedAnswer(
-      question,
-      preferences,
-    );
+    const wantsDetailedAnswer = true;
     const requestTimeoutMs = isSimulado
-      ? 90000
-      : wantsDetailedAnswer
-        ? 50000
-        : this.timeoutMs;
+      ? 210000
+      : 180000;
     const brevityPrompt = wantsDetailedAnswer
       ? "O aluno pediu profundidade: entregue resposta completa, organizada e com verificacao final."
       : "Se a pergunta nao pedir profundidade, responda de forma objetiva e didatica em no maximo 8 linhas, sem perder precisao matematica.";
-    const estimatedOutputTokens = isSimulado
-      ? 2200
-      : wantsDetailedAnswer
-        ? 1200
-        : 500;
+    const estimatedOutputTokens = isSimulado ? 3200 : 2200;
 
     const messages: OllamaChatMessage[] = [
       { role: "system" as const, content: SYSTEM_PROMPT },
@@ -485,7 +532,7 @@ export class OllamaTeacherService implements TeacherService {
 
         for (
           let attempt = 0;
-          attempt < 3 && doneReason === "length";
+          attempt < 6 && doneReason === "length";
           attempt += 1
         ) {
           const continuationPrompt: OllamaChatMessage = {
@@ -496,7 +543,7 @@ export class OllamaTeacherService implements TeacherService {
 
           const continuationChunk = await this.requestOllama(
             [...continuationMessages, continuationPrompt],
-            Math.floor(estimatedOutputTokens * 0.75),
+            Math.floor(estimatedOutputTokens * 0.9),
             requestTimeoutMs,
           );
 
@@ -516,8 +563,18 @@ export class OllamaTeacherService implements TeacherService {
         combinedText = removeAdjacentDuplicateLines(combinedText);
       }
 
-      if (!wantsDetailedAnswer && !isSimulado) {
-        return toConciseAnswer(combinedText);
+      if (isCorruptedResponse(combinedText)) {
+        const recovered = await this.recoverFromCorruptedOutput(
+          messages,
+          estimatedOutputTokens,
+          requestTimeoutMs,
+        );
+
+        if (!recovered || isCorruptedResponse(recovered)) {
+          return buildOfflineFallback(question, preferences);
+        }
+
+        combinedText = removeAdjacentDuplicateLines(recovered);
       }
 
       if (isSimulado) {

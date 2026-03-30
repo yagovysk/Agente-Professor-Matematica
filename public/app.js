@@ -39,12 +39,12 @@ function renderSuggestions() {
   });
 }
 
-function appendMessage(kind, text) {
+function appendMessage(kind, text, meta = {}) {
   const div = document.createElement("div");
   div.className = `msg ${kind}`;
 
   if (kind === "bot") {
-    safeRenderBotMessage(div, text);
+    safeRenderBotMessage(div, text, meta);
   } else {
     div.textContent = text;
   }
@@ -55,27 +55,102 @@ function appendMessage(kind, text) {
   return div;
 }
 
-function safeRenderBotMessage(container, text) {
+function safeRenderBotMessage(container, text, meta = {}) {
   const source = String(text || "");
   const content = document.createElement("div");
   content.className = "msg-content";
 
   try {
-    if (source.length > MAX_RICH_RENDER_LENGTH) {
-      content.classList.add("msg-content-plain");
-      content.textContent = source;
+    if (meta.studyMode !== "simulado") {
+      renderRichInto(content, source);
       container.appendChild(content);
       return;
     }
 
-    content.innerHTML = renderBotHtml(source);
+    const split = splitGabaritoSection(source);
+
+    if (!split) {
+      renderRichInto(content, source);
+      container.appendChild(content);
+      return;
+    }
+
+    renderRichInto(content, split.main);
     container.appendChild(content);
-    renderMath(content);
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "gabarito-wrap";
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.className = "gabarito-toggle-btn";
+    toggleBtn.textContent = "Ver o gabarito";
+
+    const panel = document.createElement("div");
+    panel.className = "gabarito-panel hidden";
+    renderRichInto(panel, split.gabarito);
+
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = panel.classList.contains("hidden");
+      panel.classList.toggle("hidden", !isHidden);
+      toggleBtn.textContent = isHidden ? "Ocultar gabarito" : "Ver o gabarito";
+    });
+
+    wrapper.appendChild(toggleBtn);
+    wrapper.appendChild(panel);
+    container.appendChild(wrapper);
   } catch {
     content.classList.add("msg-content-plain");
     content.textContent = source;
     container.appendChild(content);
   }
+}
+
+function renderRichInto(element, text) {
+  const source = String(text || "");
+
+  if (source.length > MAX_RICH_RENDER_LENGTH) {
+    element.classList.add("msg-content-plain");
+    element.textContent = source;
+    return;
+  }
+
+  element.innerHTML = renderBotHtml(source);
+  renderMath(element);
+}
+
+function splitGabaritoSection(text) {
+  const source = String(text || "").trim();
+  const regex = /(^|\n)(#{1,6}\s*)?gabarito\b\s*:?/im;
+  const match = regex.exec(source);
+
+  if (!match) {
+    return null;
+  }
+
+  const start = match.index + (match[1] ? match[1].length : 0);
+  const main = source.slice(0, start).trim();
+  const gabarito = source.slice(start).trim();
+  const gabaritoBody = gabarito
+    .split("\n")
+    .slice(1)
+    .join("\n")
+    .replace(/(^|\n)\s*[-*_]{3,}\s*(?=\n|$)/g, "")
+    .trim();
+
+  if (!main || !gabarito) {
+    return null;
+  }
+
+  if (!gabaritoBody) {
+    return {
+      main,
+      gabarito:
+        "## Gabarito\n\nGabarito nao foi retornado nesta resposta. Gere novamente o simulado para obter o gabarito completo.",
+    };
+  }
+
+  return { main, gabarito };
 }
 
 function escapeHtml(text) {
@@ -131,6 +206,16 @@ function estimateSeconds(question, preferences) {
   return isDetailed ? 24 : 10;
 }
 
+function getRequestTimeoutMs(question, preferences) {
+  if (preferences.studyMode === "simulado") {
+    return 300000;
+  }
+
+  const isDetailed =
+    /passo a passo|completo|detalhad|demonstre|com exemplo/i.test(question);
+  return isDetailed ? 270000 : 210000;
+}
+
 function createLoadingMessage(question, preferences) {
   const div = document.createElement("div");
   div.className = "msg bot loading";
@@ -183,26 +268,45 @@ function sanitizeHistory(items) {
   }));
 }
 
-async function sendQuestion(question) {
+async function sendQuestion(question, preferenceOverrides = {}) {
   appendMessage("user", question);
   history.push({ role: "user", content: question });
 
   sendBtn.disabled = true;
   generateSimuladoBtn.disabled = true;
   sendBtn.textContent = "CARREGANDO...";
-  const preferences = buildPreferences();
+  const preferences = {
+    ...buildPreferences(),
+    ...preferenceOverrides,
+    simulator: {
+      ...buildPreferences().simulator,
+      ...(preferenceOverrides.simulator || {}),
+    },
+  };
   const loading = createLoadingMessage(question, preferences);
 
   try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question,
-        preferences,
-        history: sanitizeHistory(history),
-      }),
-    });
+    const controller = new AbortController();
+    let requestTimeoutHandle = setTimeout(() => {
+      controller.abort();
+    }, getRequestTimeoutMs(question, preferences));
+
+    let response;
+    try {
+      response = await fetch("/api/chat", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          preferences,
+          history: sanitizeHistory(history),
+        }),
+      });
+    } finally {
+      clearTimeout(requestTimeoutHandle);
+      requestTimeoutHandle = null;
+    }
 
     const data = await response.json();
 
@@ -211,12 +315,21 @@ async function sendQuestion(question) {
     }
 
     loading.remove();
-    appendMessage("bot", data.answer);
+    appendMessage("bot", data.answer, { studyMode: preferences.studyMode });
     history.push({ role: "assistant", content: data.answer });
   } catch (error) {
     loading.remove();
+    const timeoutMsg =
+      preferences.studyMode === "simulado"
+        ? "A resposta do simulado demorou demais e a requisicao foi cancelada. Tente novamente ou reduza a quantidade de questoes."
+        : "A resposta demorou demais e a requisicao foi cancelada. Tente novamente em alguns segundos.";
+
     const message =
-      error instanceof Error ? error.message : "Falha ao obter resposta";
+      error instanceof Error && error.name === "AbortError"
+        ? timeoutMsg
+        : error instanceof Error
+          ? error.message
+          : "Falha ao obter resposta";
     appendMessage("bot", `Erro: ${message}`);
   } finally {
     sendBtn.disabled = false;
@@ -238,12 +351,22 @@ form.addEventListener("submit", async (event) => {
 });
 
 generateSimuladoBtn.addEventListener("click", async () => {
+  const previousMode = studyModeInput.value;
   studyModeInput.value = "simulado";
   const topic = simTopicInput.value.trim() || "calculo diferencial e integral";
   const difficulty = simDifficultyInput.value;
   const count = Number(simCountInput.value) || 5;
   const question = `Gere um simulado de ${count} questoes sobre ${topic}, dificuldade ${difficulty}.`;
-  await sendQuestion(question);
+  await sendQuestion(question, {
+    studyMode: "simulado",
+    simulator: {
+      topic,
+      difficulty,
+      questionCount: count,
+      withAnswers: simWithAnswersInput.checked,
+    },
+  });
+  studyModeInput.value = previousMode || "tutoria";
 });
 
 appendMessage(

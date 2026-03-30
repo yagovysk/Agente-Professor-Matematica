@@ -257,6 +257,36 @@ h1 {
   padding-bottom: 2px;
 }
 
+.gabarito-wrap {
+  margin-top: 10px;
+}
+
+.gabarito-toggle-btn {
+  border: 1px solid rgba(74, 241, 169, 0.56);
+  background: rgba(8, 51, 44, 0.62);
+  color: #d8fff0;
+  border-radius: 9px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.gabarito-toggle-btn:hover {
+  background: rgba(12, 69, 58, 0.8);
+}
+
+.gabarito-panel {
+  margin-top: 10px;
+  border: 1px solid rgba(74, 241, 169, 0.28);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(4, 34, 30, 0.48);
+}
+
+.hidden {
+  display: none;
+}
+
 .chat-form {
   display: grid;
   grid-template-columns: 1fr auto;
