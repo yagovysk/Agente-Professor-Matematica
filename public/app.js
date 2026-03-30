@@ -118,12 +118,10 @@ function renderMath(element) {
   });
 }
 
-
 function estimateSeconds(question, preferences) {
   const isSimulado = preferences.studyMode === "simulado";
-  const isDetailed = /passo a passo|completo|detalhad|demonstre|com exemplo/i.test(
-    question,
-  );
+  const isDetailed =
+    /passo a passo|completo|detalhad|demonstre|com exemplo/i.test(question);
 
   if (isSimulado) {
     const count = Number(preferences.simulator?.questionCount) || 5;
@@ -179,7 +177,9 @@ function buildPreferences() {
 function sanitizeHistory(items) {
   return items.slice(-MAX_HISTORY_ITEMS).map((item) => ({
     role: item.role,
-    content: String(item.content || "").trim().slice(0, MAX_HISTORY_MESSAGE_LENGTH),
+    content: String(item.content || "")
+      .trim()
+      .slice(0, MAX_HISTORY_MESSAGE_LENGTH),
   }));
 }
 

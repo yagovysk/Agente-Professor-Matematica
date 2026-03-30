@@ -3,7 +3,11 @@ import { OllamaTeacherService } from "./aiTeacher";
 
 describe("OllamaTeacherService fallback", () => {
   it("retorna resposta offline quando Ollama nao esta disponivel", async () => {
-    const service = new OllamaTeacherService("http://127.0.0.1:1", "qwen2.5:3b", 300);
+    const service = new OllamaTeacherService(
+      "http://127.0.0.1:1",
+      "qwen2.5:3b",
+      300,
+    );
 
     const answer = await service.ask("Me explique Bhaskara", []);
 
@@ -12,7 +16,11 @@ describe("OllamaTeacherService fallback", () => {
   });
 
   it("gera simulado offline quando studyMode=simulado", async () => {
-    const service = new OllamaTeacherService("http://127.0.0.1:1", "qwen2.5:3b", 300);
+    const service = new OllamaTeacherService(
+      "http://127.0.0.1:1",
+      "qwen2.5:3b",
+      300,
+    );
 
     const answer = await service.ask("Gere um simulado", [], {
       studyMode: "simulado",

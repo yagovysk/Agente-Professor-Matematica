@@ -83,16 +83,14 @@ function buildOfflineSimulado(preferences?: TeachingPreferences): string {
     {
       statement:
         "Resolva: integral de (2x^3 - 5x + 1) dx e verifique derivando o resultado.",
-      answer:
-        "F(x)=x^4-(5/2)x^2+x+C. Derivando: F'(x)=2x^3-5x+1.",
+      answer: "F(x)=x^4-(5/2)x^2+x+C. Derivando: F'(x)=2x^3-5x+1.",
       criteria:
         "Integrar termo a termo, incluir constante C e validar com derivacao final.",
     },
     {
       statement:
         "Calcule o limite lim_{x->0} (sin(3x)/x) e justifique usando limite fundamental.",
-      answer:
-        "lim_{x->0} sin(3x)/x = 3.",
+      answer: "lim_{x->0} sin(3x)/x = 3.",
       criteria:
         "Usar limite fundamental com substituicao adequada e justificar o fator 3.",
     },
@@ -105,18 +103,15 @@ function buildOfflineSimulado(preferences?: TeachingPreferences): string {
         "Identificar restricao do logaritmo, fatorar o trinomio e discutir pontos excluidos.",
     },
     {
-      statement:
-        "Calcule integral definida de 0 a 1 de (2x - 3x^2 + e^x) dx.",
-      answer:
-        "Resultado: [x^2 - x^3 + e^x]_0^1 = (1-1+e)-(0-0+1)=e-1.",
+      statement: "Calcule integral definida de 0 a 1 de (2x - 3x^2 + e^x) dx.",
+      answer: "Resultado: [x^2 - x^3 + e^x]_0^1 = (1-1+e)-(0-0+1)=e-1.",
       criteria:
         "Integrar corretamente cada termo e aplicar limites sem erro algébrico.",
     },
     {
       statement:
         "Use regra do produto para derivar h(x)=x^2*e^x e simplifique.",
-      answer:
-        "h'(x)=2x*e^x + x^2*e^x = e^x(x^2+2x).",
+      answer: "h'(x)=2x*e^x + x^2*e^x = e^x(x^2+2x).",
       criteria:
         "Aplicar regra do produto e apresentar fatoracao final simplificada.",
     },
@@ -132,12 +127,17 @@ function buildOfflineSimulado(preferences?: TeachingPreferences): string {
 
   const genericBank = Array.from({ length: 10 }, (_, idx) => ({
     statement: `Questao ${idx + 1} sobre ${topic} (${difficulty}): resolva com justificativa matematica completa.`,
-    answer: "Resultado esperado: solucao coerente, passos claros e verificacao final.",
-    criteria: "Definir metodo, desenvolver passos essenciais e concluir com verificacao.",
+    answer:
+      "Resultado esperado: solucao coerente, passos claros e verificacao final.",
+    criteria:
+      "Definir metodo, desenvolver passos essenciais e concluir com verificacao.",
   }));
 
   const bank = isCalculus ? calculusBank : genericBank;
-  const selected = Array.from({ length: count }, (_, idx) => bank[idx % bank.length]);
+  const selected = Array.from(
+    { length: count },
+    (_, idx) => bank[idx % bank.length],
+  );
 
   const questions = selected
     .map(
@@ -162,7 +162,10 @@ function buildOfflineSimulado(preferences?: TeachingPreferences): string {
   ].join("\n");
 }
 
-function buildOfflineTutor(question: string, preferences?: TeachingPreferences): string {
+function buildOfflineTutor(
+  question: string,
+  preferences?: TeachingPreferences,
+): string {
   const normalized = question.toLowerCase();
 
   if (normalized.includes("bhaskara") || normalized.includes("delta")) {
@@ -366,9 +369,7 @@ function hasCompleteSimuladoStructure(
 ): boolean {
   const questionMatches = text.match(/quest[aã]o\s*\d+/gi) || [];
   const hasAllQuestions = questionMatches.length >= expectedCount;
-  const hasAnswerSection = withAnswers
-    ? /gabarito/i.test(text)
-    : true;
+  const hasAnswerSection = withAnswers ? /gabarito/i.test(text) : true;
 
   return hasAllQuestions && hasAnswerSection;
 }
@@ -482,7 +483,11 @@ export class OllamaTeacherService implements TeacherService {
           { role: "assistant", content: combinedText },
         ];
 
-        for (let attempt = 0; attempt < 3 && doneReason === "length"; attempt += 1) {
+        for (
+          let attempt = 0;
+          attempt < 3 && doneReason === "length";
+          attempt += 1
+        ) {
           const continuationPrompt: OllamaChatMessage = {
             role: "user",
             content:
@@ -522,7 +527,11 @@ export class OllamaTeacherService implements TeacherService {
 
         if (
           isCorruptedResponse(cleanedOutput) ||
-          !hasCompleteSimuladoStructure(cleanedOutput, expectedCount, withAnswers)
+          !hasCompleteSimuladoStructure(
+            cleanedOutput,
+            expectedCount,
+            withAnswers,
+          )
         ) {
           return buildOfflineSimulado(preferences);
         }
