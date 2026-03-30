@@ -16,14 +16,6 @@ O aluno pode perguntar sobre Bhaskara, equacoes, produtos notaveis, inequacoes e
 - Formato: Web app com API propria
 - Destaque: Explicacoes passo a passo para Bhaskara e temas correlatos
 
-## Screenshots
-
-Substitua os links abaixo pelas capturas reais da sua aplicacao para deixar o README pronto para portfolio:
-
-![Tela inicial - placeholder](https://via.placeholder.com/1200x700.png?text=Professor+de+Matematica+-+Tela+Inicial)
-![Conversa sobre Bhaskara - placeholder](https://via.placeholder.com/1200x700.png?text=Chat+-+Explicacao+de+Bhaskara)
-![Responsividade mobile - placeholder](https://via.placeholder.com/420x860.png?text=Versao+Mobile)
-
 ## Demo local
 
 - URL local: http://localhost:3000
